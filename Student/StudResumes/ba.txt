@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<?php
+session_start();
+$companycode=$_SESSION["companycode"];
+?>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Campus Drive Requirement</title>
+        <?php
+        
+        include './header_link.php';
+        ?>
+    </head>
+    <body>
+        <?php
+        
+       // include './company_header.php';
+        ?>
+        <form method="POST" action="campusreq.php">
+           <center>
+            <?php
+             $cd=date('Y/m/d');
+             ?>
+                
+               <label>Created Date</label>
+               <input type="text" name="txtdate" value="<?php echo $cd;?>" readonly="true">
+          
+                    <br><br>
+                
+                    <label>Company Code</label>
+                    <input type="text" name="txtcode" value="<?php echo $companycode;?>" readonly="true">
+                 
+                     <br><br>
+                     <label>Job Type</label>
+                    <select name="jobtype">
+                        <option value="arts">Arts</option>
+                         <option value="commerce">Commerce</option>
+                           <option value="medical">Medical</option>
+                           <option value="engineering">Engineering</option>
+                           <option value="architecture">Architecture</option>
+                           <option value="hotel">Hotel Management</option>
+                          </select>
+
+                    <br><br>
+                     <label>POST</label>
+                    <input type="text" name="txtpost" required>
+                 
+                    <br><br>
+                
+                    <label>Salary Package</label>
+                    <input type="text" name="txtsal" required>
+                 
+                     <br><br>
+                
+                     <label> Minimum Percentage in SSLC</label>
+                    <input type="text" name="txtsslcper" required>
+                 
+                    <br><br>
+                
+                    <label>Degree Minimum Percentage</label>
+                    <input type="text" name="txtdipper" required>
+                 
+                     <br><br>
+                     
+                     <label>Backlog allowed</label>
+                    <input type="text" name="txtba" required>
+                 
+                     <br><br>
+        
+                     <label>Requirement</label>
+                    <input type="text" name="txtreq" required>
+                 
+                     <br><br>
+        
+                     <label>Interview Date</label>
+                    <input type="text" name="txtindate" required>
+                 
+                     <br><br>
+                     <center>
+                     
+                     <input type="submit" value="Update" name="btnupdate">
+                     <input type="reset" value="Reset">
+                     <input type="submit" name="btnaddskills" value="Add Skills"></a>
+                 </center>
+                   
+        </form>  
+             
+        
+       //include './company_footer.php';
+        
+    </body>
+</html>

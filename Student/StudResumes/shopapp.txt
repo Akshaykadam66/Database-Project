@@ -1,0 +1,1194 @@
+customer file:
+
+browse.php
+<?php
+
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+$username=null;
+$passwd=null;
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$array_products=array();
+$stmt=$conn->prepare("select * from products");
+$stmt->execute();
+while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+{
+     array_push($array_products,$row);
+}
+$conn=null;
+$c=count($array_products);
+echo "<table border=1 align=center width=300>";
+for($i=0;$i<$c;$i++)
+{
+    $pcode=$array_products[$i]["productcode"];
+    $pname=$array_products[$i]["productname"];
+    $price=$array_products[$i]["price"];
+    
+    echo "<tr>";
+    
+    echo "<td>";
+    echo $array_products[$i]["productcode"];
+    echo "</td>";
+    
+    echo "<td>";
+    echo $array_products[$i]["productname"];
+    echo "</td>";
+    
+    echo "<td>";
+    echo $array_products[$i]["price"];
+    echo "</td>";
+    
+    echo "<td>";
+    echo "<a href=buy.php?param_pcode=$pcode&param_pname=$pname&param_price=$price>Buy This</a>";
+    echo "</td>";
+    
+    echo "</tr>";
+}
+echo "</table>";
+?>
+
+
+buy.php
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>BUY ITEMS</title>
+    </head>
+    <body>
+        <?php
+            $productcode=$_REQUEST["param_pcode"];
+            $productname=$_REQUEST["param_pname"];
+            $price=$_REQUEST["param_price"];
+        ?>
+        <form method="POST" action="cart.php">
+            <table border="1">
+                <tr>
+                    <td>Product Code</td>
+                    <td><input type="text" name="txtproductcode" value="<?php echo $productcode;?>"
+                    readonly="true"/>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Product Name</td>
+                    <td><input type="text" name="txtproductname" value="<?php echo $productname;?>"
+                    readonly="true"/>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Price</td>
+                    <td><input type="text" name="txtprice" value="<?php echo $price;?>"
+                    readonly="true"/>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Quantity</td>
+                    <td><input type="text" name="txtqty"/></td>
+                </tr>
+                
+                <tr>
+                    <td><input type="submit" name="btnsubmit" value="BUY"/></td>
+                </tr>  
+            </table>
+        </form>
+    </body>
+</html>
+
+
+
+cart.php
+<?php
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+session_start();
+$productcode=$_POST["txtproductcode"];
+$price=$_POST["txtprice"];
+$qty=$_POST["txtqty"];
+$customerid=$_SESSION["customerid"];
+$amt=$qty*$price;
+$username=null;
+$passwd=null;
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("insert into cart(custid,productcode,price,qty,amt)values(?,?,?,?,?)");
+$stmt->bindParam(1, $customerid);
+$stmt->bindParam(2, $productcode);
+$stmt->bindParam(3, $price);
+$stmt->bindParam(4, $qty);
+$stmt->bindParam(5, $amt);
+if($stmt->execute())
+{
+    $msg="Added To Cart";
+}
+ else 
+{
+     $msg="Failed in Adding to Cart";
+}
+echo "Product Code=$productcode";
+echo"<br/>";
+echo "Amount=$amt";
+echo"<br/>";
+echo "Price=$price";
+echo"<br/>";
+echo "Quantity=$qty";
+echo"<br/>";
+echo"<br/>";
+echo "$msg";
+echo"<br/>";
+echo"<br/>";
+$conn=null;
+echo  "<a href=browse.php> Continue Shopping </a>";
+echo "<br/>";
+echo  "<a href=checkout.php> Check Out </a>";
+?>
+
+
+
+
+checkout.php
+<?php
+session_start();
+?>
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Check Out</title>
+    </head>
+    <body>
+        <?php
+        $array_cart=array();
+        $array_cartrows=array();
+        $totalamount=0;
+        $tax=0;
+        $netamount=0;
+        $orderid=0;
+        $orderdate=null;
+        $status="New Order";
+        // fetch custid from session
+      
+        $custid=$_SESSION["customerid"];
+        echo $custid;
+        $username=null;
+        $passwd=null;
+        $conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+        //find totalamount from cart based on custid
+        $stmt=$conn->prepare("select sum(amt) as totalamount  from cart where custid=?");
+        $stmt->bindParam(1, $custid);
+        if($stmt->execute())
+        {
+        while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+        {
+         array_push($array_cart,$row);
+        }
+         //get the amount
+         $totalamount=$array_cart[0]["totalamount"];
+         $tax=.04*$totalamount;
+         $netamount=$tax+$totalamount;
+         
+         //get system date
+         $orderdate=date("y/m/d");
+     
+         
+         echo $totalamount;
+         echo $custid;
+         echo $tax;
+         echo $netamount;
+         //insert into orders table
+          $stmtorders=$conn->prepare("insert into orders (custid,orderdate,totalamount,tax,netamount,status)values(?,?,?,?,?,?)");
+          $stmtorders->bindParam(1, $custid);                                 
+          $stmtorders->bindParam(2, $orderdate );  
+          $stmtorders->bindParam(3, $totalamount);
+          $stmtorders->bindParam(4, $tax);  
+          $stmtorders->bindParam(5, $netamount);  
+          $stmtorders->bindParam(6, $status);  
+          if($stmtorders->execute())
+          {
+           //insert into orderdetails table
+           //get orderid generated
+            $orderid=$conn->lastInsertId();
+             //get all rows from cart table and store in array
+            $stmtcart=$conn->prepare("select * from cart where custid=?");
+            $stmtcart->bindParam(1, $custid);
+            if($stmtcart->execute())
+             {
+            while($row=$stmtcart->fetch(PDO::FETCH_ASSOC))
+            {
+                array_push($array_cartrows,$row);
+            }
+             
+            //insert into orderdetails using $array_cartrows
+            for($i=0;$i<count($array_cartrows);$i++)
+            {
+            $stmtorderdetails=$conn->prepare("insert into orderdetails (orderno,productcode,qty,price,amount) values(?,?,?,?,?)");
+            $stmtorderdetails->bindParam(1,$orderid);
+            $stmtorderdetails->bindParam(2,$array_cartrows[$i]["productcode"]);
+            $stmtorderdetails->bindParam(3,$array_cartrows[$i]["qty"]);
+            $stmtorderdetails->bindParam(4,$array_cartrows[$i]["price"]);
+            $stmtorderdetails->bindParam(5,$array_cartrows[$i]["amt"]);
+            $stmtorderdetails->execute();
+            
+           }
+           //delete all rows from cart based on custid
+           $stmtdel=$conn->prepare("delete from cart where custid=?");
+           $stmtdel->bindParam(1,$custid);
+           if($stmtdel->execute())
+           {
+              $_SESSION["orderno"]=$orderid;
+              header("Location:viewmyorders.php");
+           }
+           else
+           {
+              $msg="order failed";
+              echo $msg;
+           }
+          }
+            else 
+            { 
+            $msg="order failed";
+            echo $msg;
+ }
+          }
+          
+ else 
+{
+     $msg="order failed";
+     echo $msg;
+ }
+          }
+        
+ 
+      ?>
+    </body>
+</html>
+
+
+
+custlogin.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>CUSTOMER LOGIN</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <form method="POST" action="custlogin.php">
+            <table border="1" align="center">
+                <tr>
+                    <td>E-Mail ID</td>
+                    <td><input type="text" name="txtemailid"/></td>
+                </tr>
+                <tr>
+                    <td>Password</td>
+                    <td><input type="password" name="txtpassword"/></td>
+                </tr>
+                <tr>
+                    <td><input type="submit" value="LOGIN" name="btnlogin"/></td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>
+
+
+
+custlogin.php
+<?php
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+session_start();
+$emailid=$_POST["txtemailid"];
+$password=$_POST["txtpassword"];
+$username=null;
+$passwd=null;
+$array_customer=array();
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("select * from customers where emailid=? and password=?");
+$stmt->bindParam(1, $emailid);
+$stmt->bindParam(2, $password);
+$stmt->execute();
+while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+{
+    array_push($array_customer, $row);
+}
+$c=count($array_customer);
+$conn=null;
+$msg="";
+if($c==0)
+{
+    $msg="Invalid Login";
+}
+else
+{
+    $_SESSION["emailid"]=$emailid;
+    $_SESSION["password"]=$password;
+    $_SESSION["customerid"]=$array_customer[0]["custid"];
+    header("Location:customerhome.html");
+}
+$conn=null;
+echo "$msg";
+?>
+
+
+customerhome.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>CUSTOMER HOME PAGE</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <a href="browse.php">
+            Browse Products
+        </a>
+        <br/>
+        <br/>
+        <a href="viewmyorders.php">
+            View My Orders
+        </a>
+        <br/>
+        <br/>
+        <a href="changepassword.php">
+            Change Password
+        </a>
+        <br/>
+        <br/>
+        <a href="logout.php">
+            Logout
+        </a>
+    </body>
+</html>
+
+
+
+reg.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Registration</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <form method="POST" action="reg.php">
+            <table border="1">
+                <tr>
+                    <td>Name</td>
+                    <td><input type="text" name="txtname"/></td>
+                </tr>
+                <tr>
+                    <td>Area</td>
+                    <td><input type="text" name="txtarea"/></td>
+                </tr>
+                <tr>
+                    <td>City</td>
+                    <td><input type="text" name="txtcity"/></td>
+                </tr>
+                <tr>
+                    <td>Pin Code</td>
+                    <td><input type="text" name="txtpincode"/></td>
+                </tr>
+                <tr>
+                    <td>E-Mail ID</td>
+                    <td><input type="text" name="txtemailid"/></td>
+                </tr>
+                <tr>
+                    <td>Mobile</td>
+                    <td><input type="text" name="txtmobile"/></td>
+                </tr>
+                <tr>
+                    <td>Password</td>
+                    <td><input type="password" name="txtpassword"/></td>
+                </tr>
+                    <td><input type="submit" name="btnregister" value="REGISTER"/></td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>
+
+
+
+
+reg.php
+<?php
+
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+$name=$_POST["txtname"];
+$area=$_POST["txtarea"];
+$city=$_POST["txtcity"];
+$pincode=$_POST["txtpincode"];
+$emailid=$_POST["txtemailid"];
+$mobile=$_POST["txtmobile"];
+$password=$_POST["txtpassword"];
+$username=null;
+$passwd=null;
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("insert into customers(name,area,city,pincode,emailid,mobile,password)values(?,?,?,?,?,?,?)");
+$stmt->bindParam(1,$name);
+$stmt->bindParam(2,$area);
+$stmt->bindParam(3,$city);
+$stmt->bindParam(4,$pincode);
+$stmt->bindParam(5,$emailid);
+$stmt->bindParam(6,$mobile);
+$stmt->bindParam(7,$password);
+if($stmt->execute())
+{
+    $msg="Inserted";
+}
+ else 
+{
+     $msg="Insertion Failed";
+}
+$conn=null;
+echo "$msg";
+?>
+
+
+
+viwmyorders.php
+ <?php
+  session_start();
+  ?>
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>View Products</title>
+    </head>
+    <body>
+        <?php
+        //fetch orders and orderdetails tables based on ordernumber and display
+        
+        $orderid=$_SESSION["orderno"];
+        $array_orders=array();
+        $array_orderdetails=array();
+        $username=null;
+        $passwd=null;
+        $conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+        $stmtorders=$conn->prepare("select * from orders where orderno=?");
+        $stmtorders->bindParam(1,$orderid);
+        
+        if($stmtorders->execute())
+        {
+             while($row=$stmtorders->fetch(PDO::FETCH_ASSOC))
+                    
+             {
+                  array_push($array_orders,$row);
+                 
+             }
+        //fetch order details
+             $stmtorderdetails=$conn->prepare("select * from orderdetails where orderno=?");
+             
+             $stmtorderdetails->bindParam(1,$orderid);
+             
+             if($stmtorderdetails->execute())
+             {
+                  while($row=$stmtorderdetails->fetch(PDO::FETCH_ASSOC))
+                  {
+                      array_push($array_orderdetails,$row);
+                  }
+             
+        
+        //display
+        echo "<table border=1>";
+        echo "<tr>";
+        echo "<td>ordernumber</td>";
+        echo "<td>".$array_orders[0]["orderno"]."</td>";
+        echo "</tr>";
+        
+            echo "<tr>";
+        echo "<td>orderdate</td>";
+        echo "<td>".$array_orders[0]["orderdate"]."</td>";
+        echo "</tr>";
+            echo "<tr>";
+        echo "<td>customerid</td>";
+        echo "<td>".$array_orders[0]["custid"]."</td>";
+        echo "</tr>";
+        
+            echo "<tr>";
+        echo "<td>totalamount</td>";
+        echo "<td>".$array_orders[0]["totalamount"]."</td>";
+        echo "</tr>";
+            echo "<tr>";
+        echo "<td>tax</td>";
+        echo "<td>".$array_orders[0]["tax"]."</td>";
+        echo "</tr>";  
+        echo "<tr>";
+        echo "<td>netamount</td>";
+        echo "<td>".$array_orders[0]["netamount"]."</td>";
+        echo "</tr>";
+        
+            echo "<tr>";
+        echo "<td>orderstatus</td>";
+        echo "<td>".$array_orders[0]["status"]."</td>";
+        echo "</tr>";
+        
+        echo "</table>";
+        //display order details using loop
+        echo "<br/>";
+        echo "<br/>";
+        echo "<table border=1>";
+        echo "<tr>";
+        echo "<td>productcode</td>";
+        echo "<td>price</td>";
+        echo "<td>qty</td>";
+        echo "<td>amount</td>";
+        echo "</tr>";
+        for($i=0;$i<count($array_orderdetails);$i++)
+        {
+           echo "<tr>";
+            echo "<td>".$array_orderdetails[$i]["productcode"]."</td>";
+           
+            echo "<td>".$array_orderdetails[$i]["price"]."</td>";
+        
+            echo "<td>".$array_orderdetails[$i]["qty"]."</td>";
+        
+            echo "<td>".$array_orderdetails[$i]["amount"]."</td>";
+              echo "</tr>";
+         }
+         echo "</table>";
+        }
+        }
+         ?>
+    </body>
+</html>
+
+
+
+changepassword.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Change Password</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <form method="POST" action="changepassword.php">
+            <table border="1">
+                <tr>
+                    <td>Current Password</td>
+                    <td><input type="password" name="txtcurrentpassword"/></td>
+                </tr>
+                <tr>
+                    <td>New Password</td>
+                    <td><input type="password" name="txtnewpassword"/></td>
+                </tr>
+                <tr>
+                    <td>Confirm Password</td>
+                    <td><input type="password" name="txtconfirmpassword"/></td>
+                </tr>
+                <tr>
+                    <td><input type="submit" value="CHANGE" name="txtbtnchange"/></td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>
+
+
+
+
+
+changepassword.php
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<?php
+  session_start();
+ ?>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Change Password</title>
+    </head>
+    <body>
+        <?php
+        $currentpwd=$_POST["txtcurrentpassword"];
+        $newpwd=$_POST["txtnewpassword"];
+        $confpwd=$_POST["txtconfirmpassword"];
+        
+        $emailid=$_SESSION["emailid"];
+        $password=$_SESSION["password"];
+        if($password==$currentpwd)
+        {
+            $username=null;
+            $passwd=null;
+            $conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+            
+            $stmt=$conn->prepare("update customers set password=? where emailid=?");
+            
+            $stmt->bindParam(1,$newpwd);
+            $stmt->bindParam(2,$emailid);
+            
+            if($stmt->execute())
+            {
+                $msg="Password Changed Successfully";
+                
+            }
+            else
+            {
+                 $msg="Password Change Failed";
+                 
+            }
+            }
+            else
+            {
+                 $msg="Current Password is Invalid";
+                
+            }
+            echo $msg;
+        
+        ?>
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+owner file:
+
+addproduct.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <form method ="POST" action="addproduct.php">
+            <table border="1">
+                <tr>
+                    <td>Product Code</td>
+                    <td><input type="text" name="txtproductcode"/></td>
+                </tr>
+                <tr>
+                    <td>Product Name</td>
+                    <td><input type="text" name="txtproductname"/></td>
+                </tr>
+                <tr>
+                    <td>Price</td>
+                    <td><input type="text" name="txtprice"/></td>
+                </tr>
+                <tr>
+                    <td>Stocks</td>
+                    <td><input type="text" name="txtstocks"/></td>
+                </tr>
+                <tr>
+                    <td><input type="submit" name="btnadd" value="ADD"/></td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>
+
+
+
+
+
+addproduct.php
+<?php
+
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+$productcode=$_POST["txtproductcode"];
+$productname=$_POST["txtproductname"];
+$price=$_POST["txtprice"];
+$stock=$_POST["txtstocks"];
+$username=null;
+$passwd=null;
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("insert into products(productcode,productname,price,stock)values(?,?,?,?)");
+$stmt->bindParam(1, $productcode);
+$stmt->bindParam(2, $productname);
+$stmt->bindParam(3, $price);
+$stmt->bindParam(4, $stock);
+if($stmt->execute())
+{
+    $msg="Inserted";
+}
+ else 
+{
+     $msg="Insertion Failed";
+}
+$conn=null;
+echo "$msg";
+?>
+
+
+
+
+login.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>LOGIN</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <form method="POST" action="login.php">
+            <table border="1" align="center">
+                <tr>
+                    <td>Login id</td>
+                    <td><input type="text" name="txtloginid"/></td>
+                    
+                </tr>
+                <tr>
+                    <td>Password</td>
+                    <td><input type="password" name="txtpassword"/></td>
+                </tr>  
+                <tr>
+                    
+                    <td><input type="submit" value="login" name="btnlogin"/></td>
+                    
+                </tr>
+            </table>
+          </form>
+    </body>
+</html>
+
+
+
+
+
+login.php
+<?php
+
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+$loginid=$_POST["txtloginid"];
+$password=$_POST["txtpassword"];
+$username=null;
+$passwd=null;
+$array_login=array();
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("select * from users where loginid=? and password=?");
+$stmt->bindParam(1,$loginid);
+$stmt->bindParam(2,$password);
+$stmt->execute();
+while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+{
+    array_push($array_login,$row);
+}
+$c=count($array_login);
+$conn=null;
+$msg="";
+if($c==0)
+{
+    $msg="Invalid Login";
+}
+ else 
+{
+     header("Location:ownerhome.html");
+}
+echo "$msg";
+?>
+
+
+
+ownerhome.html
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>OWNER HOME PAGE</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        <a href="addproduct.html">
+            Add Products
+        </a>
+        <br/>
+        <br/>
+        <a href="viewproducts.php">
+            View Products
+        </a>
+        <br/>
+        <br/>
+        <a href="viewcust.php">
+            View Customers
+        </a>
+        <br/>
+        <br/>
+         <a href="password.php">
+            Change Passcode
+        </a>
+
+    </body>
+</html>
+
+
+
+
+
+
+viewcust.php
+<?php
+
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+$arr_customers=array();
+$username=null;
+$passwd=null;
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("select * from customers");
+$stmt->execute();
+while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+{
+    array_push($arr_customers,$row);
+}
+$conn=null;
+$row=count($arr_customers);
+echo "<table border=1>";
+echo "<tr>";
+echo "<th>Customer ID</th>";
+echo "<th>Customer Name</th>";
+echo "<th>Area</th>";
+echo "<th>City</th>";
+echo "<th>Pin Code</th>";
+echo "<th>E-Mail ID</th>";
+echo "<th>Mobile No</th>";
+echo "</tr>";
+for($i=0;$i<$row;$i++)
+{
+    echo "<tr>";
+    echo "<td>".$arr_customers[$i]["custid"]."</td>";
+    echo "<td>".$arr_customers[$i]["name"]."</td>";
+    echo "<td>".$arr_customers[$i]["area"]."</td>";
+    echo "<td>".$arr_customers[$i]["city"]."</td>";
+    echo "<td>".$arr_customers[$i]["pincode"]."</td>";
+    echo "<td>".$arr_customers[$i]["emailid"]."</td>";
+    echo "<td>".$arr_customers[$i]["mobile"]."</td>";
+    echo "</tr>";
+}
+echo "</table>";
+?>
+
+
+
+
+
+viewproducts.php
+<?php
+
+/* 
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+$arr_products=array();
+$username=null;
+$passwd=null;
+$conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+$stmt=$conn->prepare("select * from products");
+$stmt->execute();
+while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+{
+    array_push($arr_products,$row);
+}
+$conn=null;
+$row=count($arr_products);
+echo "<table border=1>";
+echo "<tr>";
+echo "<th>Product Code </th>";
+echo "<th>Product Name</th>";
+echo "<th>Price</th>";
+echo "<th>Stocks</th>";
+echo "</tr>";
+for($i=0;$i<$row;$i++)
+{
+    echo "<tr>";
+    echo "<td>".$arr_products[$i]["productcode"]."</td>";
+    echo "<td>".$arr_products[$i]["productname"]."</td>";
+    echo "<td>".$arr_products[$i]["price"]."</td>";
+    echo "<td>".$arr_products[$i]["stock"]."</td>";
+    echo "</tr>";
+}
+echo "</table>";
+?>
+
+
+
+
+processorder.php
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<?php
+session_start();
+?>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Process Order</title>
+    </head>
+    <body>
+        <?php
+        $orderno=$_REQUEST["param_orderno"];
+        $username=null;
+        $passwd=null;
+        $conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+        $stmt=$conn->prepare("update orders set status='Processed' where orderno=?");
+        $stmt->bindParam(1,$orderno);
+        if($stmt->execute())
+        {
+            //fetch order details and store in array
+            $array_orderdetails=array();
+            $stmtorderdetails=$conn->prepare("select * from orderdetails where  orderno=?");
+            $stmtorderdetails->bindParam(1, $orderno);
+            $stmtorderdetails->execute();
+            while($row=$stmtorderdetails->fetch(PDO::FETCH_ASSOC))
+            {
+                array_push($array_orderdetails, $row);
+            }
+            $c=count($array_orderdetails);
+            echo $c;
+            for($i=0;$i<$c;$i++)
+            {
+                $stmtproducts=$conn->prepare("update products set stock=stock-? where productcode=?");
+                $stmtproducts->bindParam(1, $array_orderdetails[$i]["qty"]);
+                $stmtproducts->bindParam(2, $array_orderdetails[$i]["productcode"]);
+                $stmtproducts->execute();
+            }
+            $conn=null;
+            $msg="Order Processed";
+        }
+        else
+        {
+            $msg="Process Failed";
+        }
+        echo $msg;
+        ?>
+    </body>
+</html>
+
+
+
+viewneworderdetails.php
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<?php
+session_start();
+?>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>New Order Details</title>
+    </head>
+    <body>
+        <?php
+        $orderno=$_REQUEST["param_orderno"];
+        $username=null;
+        $passwd=null;
+        echo $orderno;
+        $conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+        
+        $array_orderdetails=array();
+        
+        $stmt=$conn->prepare("select * from orderdetails where orderno=?");
+        $stmt->bindParam(1,$orderno);
+        $stmt->execute();
+        while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+        {
+            array_push($array_orderdetails,$row);
+        }
+        $conn=null;
+        
+        echo "<table border=1>";
+        echo "<tr>";
+        echo "<td>orderno</td>";
+        echo "<td>productcode</td>";
+        echo "<td>qty</td>";
+        echo "<td>price</td>";
+        echo "<td>amount</td>";
+        echo "</tr>";
+        $c=count($array_orderdetails);
+        echo $c;
+        for($i=0;$i<$c;$i++)
+        {
+            echo "<tr>";
+            echo "<td>".$array_orderdetails[$i]["orderno"]."</td>";
+            echo "<td>".$array_orderdetails[$i]["productcode"]."</td>";
+            echo "<td>".$array_orderdetails[$i]["qty"]."</td>";
+            echo "<td>".$array_orderdetails[$i]["price"]."</td>";
+            echo "<td>".$array_orderdetails[$i]["amount"]."</td>";
+            echo "</tr>";
+         }
+         echo "</table>";
+         echo "<br/>";
+         echo "<br/>";
+         echo "<a href=processorder.php?param_orderno=$orderno>Process This Order</a>";
+        ?>
+    </body>
+</html>
+
+
+
+viewneworders.php
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<?php
+session_start();
+?>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>New Orders</title>
+    </head>
+    <body>
+        <?php
+        $array_neworders=array();
+        $username=null;
+        $passwd=null;
+        $conn=new PDO("mysql:host=localhost;dbname=test",$username,$passwd);
+        $stmt=$conn->prepare("select orderno,orderdate,orders.custid,name,area,city,pincode,mobile,totalamount,tax,netamount from orders,customers where orders.custid=customers.custid and orders.status='new order'");
+        $stmt->execute();
+        while($row=$stmt->fetch(PDO::FETCH_ASSOC))
+        {
+            array_push($array_neworders, $row);
+        }
+        $conn=null;
+        $c=count($array_neworders);
+        echo "<table border=1>";
+        echo "<tr>";
+        echo "<td>Order Number</td>";
+        echo "<td>Order Date</td>";
+        echo "<td>Customer ID</td>";
+        echo "<td>Customer Name</td>";
+        echo "<td>Area</td>";
+        echo "<td>City</td>";
+        echo "<td>Pin Code</td>";
+        echo "<td>Mobile No</td>";
+        echo "<td>Total Amount</td>";
+        echo "<td>Tax</td>";
+        echo "<td>Net Amount</td>";
+        echo "</tr>";
+        for($i=0;$i<$c;$i++)
+        {
+            $orderno=$array_neworders[$i]["orderno"];
+            echo "<tr>";
+            echo "<td><a href=viewneworderdetails.php?param_orderno=$orderno>$orderno</a></td>";
+            echo "<td>".$array_neworders[$i]["orderdate"]."</td>";
+            echo "<td>".$array_neworders[$i]["custid"]."</td>";
+            echo "<td>".$array_neworders[$i]["name"]."</td>";
+            echo "<td>".$array_neworders[$i]["area"]."</td>";
+            echo "<td>".$array_neworders[$i]["city"]."</td>";
+            echo "<td>".$array_neworders[$i]["pincode"]."</td>";
+            echo "<td>".$array_neworders[$i]["mobile"]."</td>";
+            echo "<td>".$array_neworders[$i]["totalamount"]."</td>";
+            echo "<td>".$array_neworders[$i]["tax"]."</td>";
+            echo "<td>".$array_neworders[$i]["netamount"]."</td>";
+            echo "</tr>";
+        }
+        echo "</table>";
+        
+        ?>
+    </body>
+</html>
