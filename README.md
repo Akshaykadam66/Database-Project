@@ -9,7 +9,7 @@ This application acts as an interface between students and the company.It provid
 * **CSS** - Styling
 * **Apache Server** - Web Server
 
-##Steps to run the project:
+## Steps to run the project:
 * Downlaod Xampp, it comes with both mysql and apache servers.
 * Use the project_database.doc file which has all the database tables to create the database for the project.
 * Copy all the 3 directories Administration,Company,Students to your path of apache server
