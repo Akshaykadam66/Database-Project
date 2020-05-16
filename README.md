@@ -3,7 +3,7 @@ This application acts as an interface between students and the company.It provid
 
 ## Tools and Technology Used:
 * **Database** - MYSQL
-* **Platform** - Netbeans IDE
+* **Platform** - Netbeans IDE for project development
 * **PHP** - Server-Side scripting language
 * **HTML** - Front-End development
 * **CSS** - Styling
